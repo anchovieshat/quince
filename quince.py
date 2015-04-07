@@ -18,6 +18,8 @@ class Game:
         self.world = World(self, world_width, world_height)
         self.entity_map = load_sprite("assets/entitiesx128.png", sprite_width, sprite_height)
         self.player = Player(self, self.entity_map[0], 0, 0)
+        self.monsters = []
+        self.monsters.append(Monster(self, self.entity_map[1], 1, 1))
         self.center_world()
 
     def center_world(self):
@@ -52,13 +54,13 @@ class World(GameObject):
         self.width = width
         self.height = height
         self.game_map = []
-        derpsurface = pygame.Surface((tilesize, tilesize))
+        temp_surf = pygame.Surface((tilesize, tilesize))
         for x in range(0, width):
             line = []
             self.game_map.append(line)
             for y in range(0, height):
                 if y % 2 == 0 and x % 2 == 0:
-                    surf = derpsurface.copy()
+                    surf = temp_surf.copy()
                     surf.fill(((y*10) % 255, (x*10)%255, (x*2)%255, 255))
                     line.append(Tile(game, surf))
                 else:
@@ -82,6 +84,12 @@ class Tile(GameObject):
     def remove_entity(self, entity):
         self.entities.remove(entity)
 
+    def is_collidable(self):
+        for entity in self.entities:
+            if entity.is_collidable():
+                return True
+        return False
+
     def draw(self, surface, x, y):
         surface.blit(self.sprite, (x, y))
 
@@ -99,6 +107,9 @@ class Entity(GameObject):
 
     def move(self, x, y):
         self.move_to(self.x + x, self.y + y)
+
+    def is_collidable(self):
+        return True
 
     def move_to(self, x, y):
         game.world.game_map[self.x][self.y].remove_entity(self)
@@ -155,8 +166,42 @@ class Player(Entity):
             return
         if y < 0:
             return
+
+        if not self.game.world.game_map[x][y].is_collidable():
+            Entity.move_to(self, x, y)
+            self.game.center_world()
+
+class Monster(Entity):
+    body_color = pygame.Color(136, 136, 136)
+
+    def __init__(self, game, sprites, x, y):
+        Entity.__init__(self, game, [], x, y)
+        self.original = sprites
+        for sprite in sprites:
+            sprite = sprite.copy()
+            px = pygame.PixelArray(sprite)
+            px.replace(self.body_color, pygame.Color(19, 67, 155)) #Body
+            self.sprites.append(sprite)
+
+    def move_to(self, x, y):
+        if self.x > x:
+            self.turn(left)
+        elif self.x < x:
+            self.turn(right)
+        if self.y > y:
+            self.turn(back)
+        elif self.y < y:
+            self.turn(front)
+
+        if x >= self.game.world.width:
+            return
+        if x < 0:
+            return
+        if y >= self.game.world.height:
+            return
+        if y < 0:
+            return
         Entity.move_to(self, x, y)
-        self.game.center_world()
 
 def load_sprite(filename, width, height):
     image = pygame.image.load(filename).convert_alpha()
