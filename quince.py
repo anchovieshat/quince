@@ -90,6 +90,10 @@ class Tile(GameObject):
                 return True
         return False
 
+    def collide(self, collider):
+        for entity in self.entities:
+            entity.collide(collider)
+
     def draw(self, surface, x, y):
         surface.blit(self.sprite, (x, y))
 
@@ -108,8 +112,14 @@ class Entity(GameObject):
     def move(self, x, y):
         self.move_to(self.x + x, self.y + y)
 
+    def remove(self):
+        self.game.world.game_map[self.x][self.y].remove_entity(self)
+
     def is_collidable(self):
         return True
+
+    def collide(self, collider):
+        pass
 
     def move_to(self, x, y):
         game.world.game_map[self.x][self.y].remove_entity(self)
@@ -171,6 +181,9 @@ class Player(Entity):
             Entity.move_to(self, x, y)
             self.game.center_world()
 
+        else:
+            self.game.world.game_map[x][y].collide(self)
+
 class Monster(Entity):
     body_color = pygame.Color(136, 136, 136)
 
@@ -182,6 +195,9 @@ class Monster(Entity):
             px = pygame.PixelArray(sprite)
             px.replace(self.body_color, pygame.Color(19, 67, 155)) #Body
             self.sprites.append(sprite)
+
+    def collide(self, collider):
+        self.remove()
 
     def move_to(self, x, y):
         if self.x > x:
