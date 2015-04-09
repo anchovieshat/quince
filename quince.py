@@ -4,15 +4,18 @@ import pygame.sysfont
 from pygame import Rect
 
 tilesize = 128
+fontsize = 15
+
 sprite_height = tilesize
 sprite_width = tilesize
 screen_width = 1024
 screen_height = 1024
-tiles_per_row = screen_width / tilesize
-tiles_per_col = screen_height / tilesize
 world_width = 100
 world_height = 100
-fontsize = 15
+
+tiles_per_row = screen_width / tilesize
+tiles_per_col = screen_height / tilesize
+
 left = 0
 front = 1
 back = 2
@@ -22,6 +25,7 @@ class Game:
     def __init__(self):
         self.screen = MainMenu(self)
         self.fonter = FontManager("cousine", fontsize, bold=True)
+        self.soundman = SoundManager()
 
     def switch_screen(self, screen):
         self.screen = screen
@@ -49,6 +53,31 @@ class FontManager:
     def draw(self, surface, pos, text, color):
         self.font.render_to(surface, pos, text, color)
 
+class SoundManager:
+    def __init__(self):
+        self.sounds = []
+        self.sounds.append(pygame.mixer.Sound("assets/sound/hit.wav"))
+        self.sounds.append(pygame.mixer.Sound("assets/sound/select.wav"))
+
+    def play(self, index):
+        self.sounds[index].play()
+
+    def stop(self, index):
+        self.sounds[index].stop()
+
+class MusicManager:
+    def load(filename):
+        pygame.mixer.music.load(filename)
+
+    def play():
+        pygame.mixer.music.play()
+
+    def stop():
+        pygame.mixer.music.fadeout(250)
+
+    def update(self):
+        pass
+
 class Screen:
     def __init__(self, game):
         self.game = game
@@ -72,8 +101,10 @@ class Menu(Screen):
         i = 0
         if key_char == pygame.K_w or key_char == pygame.K_UP:
             i -= 1
+            self.game.soundman.play(0)
         if key_char == pygame.K_s or key_char == pygame.K_DOWN:
             i += 1
+            self.game.soundman.play(0)
 
         self.selected += i
 
@@ -84,6 +115,7 @@ class Menu(Screen):
 
         if key_char == pygame.K_RETURN:
             self.items[self.selected].action()
+            self.game.soundman.play(0)
 
     def draw(self, surface):
         for (i, item) in enumerate(self.items):
@@ -109,6 +141,8 @@ class MainMenu(Menu):
 
 class CreditsMenu(Menu):
     def __init__(self, game):
+        MusicManager.load("assets/music/tomato.ogg")
+        MusicManager.play()
         items = []
         items.append(MenuItem("Crafted by Anchovieshat", lambda: None))
         Menu.__init__(self, game, items)
@@ -116,6 +150,7 @@ class CreditsMenu(Menu):
 
     def key_pressed(self, key_char):
         if key_char == pygame.K_q:
+            MusicManager.stop()
             self.game.switch_screen(MainMenu(self.game))
 
         Menu.key_pressed(self, key_char)
@@ -130,8 +165,14 @@ class World(Screen):
     def __init__(self, game, width, height):
         Screen.__init__(self, game)
 
-        self.entity_map = load_sprite("assets/entitiesx128.png", sprite_width, sprite_height)
-        self.tile_map = load_sprite("assets/tilesx128.png", sprite_width, sprite_height)
+        music_list = []
+        music_list.append("assets/music/ghosts-of-tofus.ogg")
+
+        MusicManager.load(music_list[0])
+        MusicManager.play()
+
+        self.entity_map = load_sprite("assets/sprites/entitiesx128.png", sprite_width, sprite_height)
+        self.tile_map = load_sprite("assets/sprites/tilesx128.png", sprite_width, sprite_height)
 
         self.game_map = []
         self.width = width
@@ -183,6 +224,7 @@ class World(Screen):
         if key_char == pygame.K_d:
             self.player.move(1, 0)
         if key_char == pygame.K_q:
+            MusicManager.stop()
             self.game.switch_screen(MainMenu(self.game))
 
     def draw(self, surface):
@@ -301,6 +343,7 @@ class Player(Entity):
 
         else:
             self.world.game_map[x][y].collide(self)
+            self.world.game.soundman.play(0)
 
 class Monster(Entity):
     body_color = pygame.Color(136, 136, 136)
